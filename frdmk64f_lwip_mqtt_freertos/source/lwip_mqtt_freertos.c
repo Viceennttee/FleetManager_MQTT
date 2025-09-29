@@ -96,6 +96,34 @@
 /*! @brief Priority of the temporary initialization thread. */
 #define APP_THREAD_PRIO DEFAULT_THREAD_PRIO
 
+
+
+////////flags management
+//enum for topics
+typedef enum {
+    TOPIC_FOO = 0,
+    TOPIC_BAR,
+    //insert new topics, and change current ones
+    TOPIC_COUNT
+} topic_index_t;
+
+//array for flags
+static volatile uint8_t topic_flags[TOPIC_COUNT] = {0};
+
+
+//struct to relate enum(int) and topic name(cjar)
+static const struct {
+    const char *topic_name;
+    topic_index_t index;
+} topic_map[] = {
+    //change names and add topics
+    {"foo", TOPIC_FOO},
+    {"bar", TOPIC_BAR},
+    {NULL, TOPIC_COUNT}
+};
+
+///////////flags
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -164,7 +192,16 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
 {
     LWIP_UNUSED_ARG(arg);
 
-    PRINTF("Received %u bytes from the topic \"%s\": \"", tot_len, topic);
+
+    //check which topic is sending msg and raise tahat flag
+    for (int i = 0; topic_map[i].topic_name != NULL; i++) {
+        if (strcmp(topic, topic_map[i].topic_name) == 0) {
+            topic_flags[topic_map[i].index] = 1;
+            break;
+        }
+    }
+
+    PRINTF("Received %u bytes from the topic \"%s\": \"\r\n", tot_len, topic);
 }
 
 /*!
@@ -175,6 +212,17 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
     int i;
 
     LWIP_UNUSED_ARG(arg);
+
+    //add if statements for new topics
+    if (topic_flags[TOPIC_FOO]) {
+        topic_flags[TOPIC_FOO] = 0;  // clean flag
+        PRINTF("FOO message: \r\n");
+    }
+
+    if (topic_flags[TOPIC_BAR]) {
+        topic_flags[TOPIC_BAR] = 0; //clean flag
+        PRINTF("BAR message: \r\n");
+    }
 
     for (i = 0; i < len; i++)
     {
@@ -199,7 +247,7 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
  */
 static void mqtt_subscribe_topics(mqtt_client_t *client)
 {
-    static const char *topics[] = {"lwip_topic/#", "lwip_other/#"};
+    static const char *topics[] = {"foo", "bar"};
     int qos[]                   = {0, 1};
     err_t err;
     int i;
@@ -303,14 +351,18 @@ static void mqtt_message_published_cb(void *arg, err_t err)
  */
 static void publish_message(void *ctx)
 {
-    static const char *topic   = "lwip_topic/Vicente";
+    static const char *topic   = "foo";
     static const char *message = "message from board";
+    static const char *topic2   = "bar";
+    static const char *message2 = "test msg from bar";
 
     LWIP_UNUSED_ARG(ctx);
 
-    PRINTF("Going to publish to the topic \"%s\"...\r\n", topic);
+    //PRINTF("Going to publish to the topic \"%s\"...\r\n", topic);
 
     mqtt_publish(mqtt_client, topic, message, strlen(message), 1, 0, mqtt_message_published_cb, (void *)topic);
+    mqtt_publish(mqtt_client, topic2, message2, strlen(message2), 1, 0, mqtt_message_published_cb, (void *)topic2);
+
 }
 
 /*!
