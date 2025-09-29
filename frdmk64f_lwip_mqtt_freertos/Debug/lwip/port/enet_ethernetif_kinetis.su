@@ -1,7 +1,7 @@
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\CMSIS/core_cm4.h:1809:22:__NVIC_SetPriority	16	static
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\drivers/fsl_enet.h:1187:20:ENET_ActiveRead	16	static
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\drivers/fsl_enet.h:1260:20:ENET_EnableInterrupts	16	static
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\drivers/fsl_enet.h:1279:20:ENET_DisableInterrupts	16	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\CMSIS/core_cm4.h:1809:22:__NVIC_SetPriority	16	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\drivers/fsl_enet.h:1187:20:ENET_ActiveRead	16	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\drivers/fsl_enet.h:1260:20:ENET_EnableInterrupts	16	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\drivers/fsl_enet.h:1279:20:ENET_DisableInterrupts	16	static
 ../lwip/port/enet_ethernetif_kinetis.c:183:13:ethernet_callback	48	static
 ../lwip/port/enet_ethernetif_kinetis.c:312:14:ethernetif_rx_alloc	48	static
 ../lwip/port/enet_ethernetif_kinetis.c:340:13:ethernetif_rx_free	40	static

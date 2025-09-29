@@ -1,6 +1,6 @@
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\mdio/fsl_mdio.h:85:20:MDIO_Init	16	static
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\mdio/fsl_mdio.h:101:24:MDIO_Write	32	static
-C:\ITESO_IOT\frdmk64f_lwip_mqtt_freertos\mdio/fsl_mdio.h:117:24:MDIO_Read	32	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\mdio/fsl_mdio.h:85:20:MDIO_Init	16	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\mdio/fsl_mdio.h:101:24:MDIO_Write	32	static
+C:\Users\grtre\Documents\MCUXpressoIDE_25.6.136\Practica2\frdmk64f_lwip_mqtt_freertos\mdio/fsl_mdio.h:117:24:MDIO_Read	32	static
 ../phy/fsl_phyksz8081.c:56:10:PHY_KSZ8081_Init	32	static
 ../phy/fsl_phyksz8081.c:140:10:PHY_KSZ8081_Write	24	static
 ../phy/fsl_phyksz8081.c:145:10:PHY_KSZ8081_Read	24	static
