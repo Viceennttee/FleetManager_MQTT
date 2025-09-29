@@ -96,32 +96,64 @@
 /*! @brief Priority of the temporary initialization thread. */
 #define APP_THREAD_PRIO DEFAULT_THREAD_PRIO
 
-
+///
+const uint8_t *topic;
+const uint8_t *message;
+////
 
 ////////flags management
 //enum for topics
 typedef enum {
-    TOPIC_FOO = 0,
-    TOPIC_BAR,
+	speed_slider = 0,
+	battery_entry,
+	laser_slider,bumper_button,
+	mode_selector,
+	switch_connection,
+	option_list,
     //insert new topics, and change current ones
     TOPIC_COUNT
 } topic_index_t;
 
-//array for flags
-static volatile uint8_t topic_flags[TOPIC_COUNT] = {0};
+//Flags for topics
+typedef union
+{
+	uint8_t All_Flags;
+	struct
+	{
+		uint8_t 	speed_slider 		: 	1;
+		uint8_t		battery_entry 		: 	1;
+		uint8_t		laser_slider  		:	1;
+		uint8_t		bumper_button 		:	1;
+		uint8_t		mode_selector 		:	1;
+		uint8_t		switch_connection 	:	1;
+		uint8_t		option_list 		:	1;
+		uint8_t		reserved	 		:	1;
+	}topics;
+}Topic_Flags;
+
+//static volatile uint8_t topic_flags[TOPIC_COUNT] = {0};
 
 
 //struct to relate enum(int) and topic name(cjar)
 static const struct {
     const char *topic_name;
     topic_index_t index;
-} topic_map[] = {
+}topic_map[] = {
     //change names and add topics
-    {"foo", TOPIC_FOO},
-    {"bar", TOPIC_BAR},
+    {"/speed_slider/data/value", speed_slider},
+    {"/battery_entry/data/value", battery_entry},
+	{"/laser_slider/data/value" ,  laser_slider},
+	{"/bumper_button/pressed/value", bumper_button},
+	{"/mode_selector/driving_mode/value", mode_selector},
+	{"/switch_connection/state/value", switch_connection},
+	{"/option_list/job", option_list},
     {NULL, TOPIC_COUNT}
 };
 
+
+
+// global variable holding flags.
+Topic_Flags topic_status;
 ///////////flags
 
 /*******************************************************************************
@@ -193,13 +225,23 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
     LWIP_UNUSED_ARG(arg);
 
 
-    //check which topic is sending msg and raise tahat flag
-    for (int i = 0; topic_map[i].topic_name != NULL; i++) {
-        if (strcmp(topic, topic_map[i].topic_name) == 0) {
-            topic_flags[topic_map[i].index] = 1;
-            break;
-        }
-    }
+    //check which topic is sending msg and raise that flag
+        if (strcmp(topic_map[speed_slider].topic_name,topic) == 0)
+        	topic_status.topics.speed_slider = 1;
+        else if (strcmp(topic, topic_map[battery_entry].topic_name) == 0)
+        	topic_status.topics.battery_entry = 1;
+        else if (strcmp(topic, topic_map[laser_slider].topic_name) == 0)
+        	topic_status.topics.laser_slider = 1;
+        else if (strcmp(topic, topic_map[bumper_button].topic_name) == 0)
+        	topic_status.topics.bumper_button = 1;
+        else if (strcmp(topic, topic_map[mode_selector].topic_name) == 0)
+        	topic_status.topics.mode_selector = 1;
+        else if (strcmp(topic, topic_map[switch_connection].topic_name) == 0)
+        	topic_status.topics.switch_connection = 1;
+        else if (strcmp(topic, topic_map[option_list].topic_name) == 0)
+        	topic_status.topics.option_list = 1;
+        else
+        	PRINTF("Unkown topic");
 
     PRINTF("Received %u bytes from the topic \"%s\": \"\r\n", tot_len, topic);
 }
@@ -214,16 +256,12 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
     LWIP_UNUSED_ARG(arg);
 
     //add if statements for new topics
-    if (topic_flags[TOPIC_FOO]) {
-        topic_flags[TOPIC_FOO] = 0;  // clean flag
-        PRINTF("FOO message: \r\n");
+    if (topic_status.topics.speed_slider) {
+    	topic_status.topics.speed_slider = 0;  // clean flag
+        PRINTF("Speed SLIDER message: \r\n");
     }
 
-    if (topic_flags[TOPIC_BAR]) {
-        topic_flags[TOPIC_BAR] = 0; //clean flag
-        PRINTF("BAR message: \r\n");
-    }
-
+   /*
     for (i = 0; i < len; i++)
     {
         if (isprint(data[i]))
@@ -240,6 +278,7 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
     {
         PRINTF("\"\r\n");
     }
+    */
 }
 
 /*!
@@ -351,17 +390,23 @@ static void mqtt_message_published_cb(void *arg, err_t err)
  */
 static void publish_message(void *ctx)
 {
-    static const char *topic   = "foo";
+	/* TODO: Here we will need to implement a control sequence using the flags to determine which
+	 * topic is to publish, since it was not an easy implementation adding this in the callback definition
+	 * tcpipcllback has multiple calls.
+	 * */
+    static const char *topic =  topic_map[speed_slider].topic_name;
     static const char *message = "message from board";
-    static const char *topic2   = "bar";
-    static const char *message2 = "test msg from bar";
+  // static const char *topic2   = "bar";
+ //   static const char *message2 = "test msg from bar";
 
     LWIP_UNUSED_ARG(ctx);
 
     //PRINTF("Going to publish to the topic \"%s\"...\r\n", topic);
 
+
+
     mqtt_publish(mqtt_client, topic, message, strlen(message), 1, 0, mqtt_message_published_cb, (void *)topic);
-    mqtt_publish(mqtt_client, topic2, message2, strlen(message2), 1, 0, mqtt_message_published_cb, (void *)topic2);
+ //   mqtt_publish(mqtt_client, topic2, message2, strlen(message2), 1, 0, mqtt_message_published_cb, (void *)topic2);
 
 }
 
