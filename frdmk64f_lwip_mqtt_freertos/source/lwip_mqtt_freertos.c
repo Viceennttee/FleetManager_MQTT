@@ -97,8 +97,8 @@
 #define APP_THREAD_PRIO DEFAULT_THREAD_PRIO
 
 ///
-const uint8_t *topic;
-const uint8_t *to_publublish;
+
+const uint8_t *to_publish;
 ////
 
 ////////flags management
@@ -162,14 +162,15 @@ static const struct
     const char *topic_publish_name;
     topic_index_t index;
 }publish_topic_map[] ={
-		{"/low_level_controller/speed/data/value", speed_slider_value},
-		{"/low_level_controller/battery/status",batery_entry_value},
-		{"/core/sensor_laser/data/value", laser_slider_value},
-		{"/core/sensor_bumper/data", bumper_button_state},
-		{"/fleet/connection_status/state", conecttion_state},
-		{"/fleet/robot_status/state", robot_status},
-		{"/low-level/battery/data/percentage", batery_data_percentage},
-		{NULL, TOPIC_COUNT}
+		 //change names and add topics
+		    {"/speed_slider/data/value", speed_slider},
+		    {"/battery_entry/data/value", battery_entry},
+			{"/laser_slider/data/value" ,  laser_slider},
+			{"/bumper_button/pressed/value", bumper_button},
+			{"/mode_selector/driving_mode/value", mode_selector},
+			{"/switch_connection/state/value", switch_connection},
+			{"/option_list/job", option_list},
+		    {NULL, TOPIC_COUNT}
 };
 
 
@@ -282,7 +283,7 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
 
     if (topic_status.topics.speed_slider)/*If message comes from slider*/
     {
-    	to_publublish = data; //copying the data to publish back.
+    	to_publish = data; //copying the data to publish back.
     }
 
 
@@ -313,7 +314,6 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
  */
 static void mqtt_subscribe_topics(mqtt_client_t *client)
 {
-    static const char *topics[] = {"foo", "bar"};
     int qos[]                   = {0, 1};
     err_t err;
     int i;
@@ -326,17 +326,20 @@ static void mqtt_subscribe_topics(mqtt_client_t *client)
     // creating loop for Core to subscribe funcion for core
 
 
-    for (i = 0; i < ARRAY_SIZE(topics); i++)
+    for (i = 0; i < ARRAY_SIZE(topic_map); i++)
     {
-        err = mqtt_subscribe(client, topics[i].index, qos[i], mqtt_topic_subscribed_cb, LWIP_CONST_CAST(void *, topics[i]));
+        err = mqtt_subscribe(client,
+        					topic_map[i].topic_name,
+							qos[i], mqtt_topic_subscribed_cb,
+							LWIP_CONST_CAST(void *, topic_map[i].topic_name));
 
         if (err == ERR_OK)
         {
-            PRINTF("Subscribing to the topic \"%s\" with QoS %d...\r\n", topics[i], qos[i]);
+            PRINTF("Subscribing to the topic \"%s\" with QoS %d...\r\n", topic_map[i], qos[i]);
         }
         else
         {
-            PRINTF("Failed to subscribe to the topic \"%s\" with QoS %d: %d.\r\n", topics[i], qos[i], err);
+            PRINTF("Failed to subscribe to the topic \"%s\" with QoS %d: %d.\r\n", topic_map[i], qos[i], err);
         }
     }
 }
@@ -446,7 +449,7 @@ static void publish_message(void *ctx)
 
     //PRINTF("Going to publish to the topic \"%s\"...\r\n", topic);
 
-    mqtt_publish(mqtt_client, topic, to_publish, strlen(message), 1, 0, mqtt_message_published_cb, (void *)topic);
+    mqtt_publish(mqtt_client, topic, to_publish, strlen(to_publish), 1, 0, mqtt_message_published_cb, (void *)topic);
  //   mqtt_publish(mqtt_client, topic2, message2, strlen(message2), 1, 0, mqtt_message_published_cb, (void *)topic2);
 
 }
