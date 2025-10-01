@@ -98,7 +98,7 @@
 
 ///
 const uint8_t *topic;
-const uint8_t *message;
+const uint8_t *to_publublish;
 ////
 
 ////////flags management
@@ -106,7 +106,8 @@ const uint8_t *message;
 typedef enum {
 	speed_slider = 0,
 	battery_entry,
-	laser_slider,bumper_button,
+	laser_slider,
+	bumper_button,
 	mode_selector,
 	switch_connection,
 	option_list,
@@ -135,6 +136,7 @@ typedef union
 
 
 //struct to relate enum(int) and topic name(cjar)
+// topics to subscribe
 static const struct {
     const char *topic_name;
     topic_index_t index;
@@ -149,6 +151,28 @@ static const struct {
 	{"/option_list/job", option_list},
     {NULL, TOPIC_COUNT}
 };
+
+
+/*
+ * Topics to publish
+ * */
+
+static const struct
+{
+    const char *topic_publish_name;
+    topic_index_t index;
+}publish_topic_map[] ={
+		{"/low_level_controller/speed/data/value", speed_slider_value},
+		{"/low_level_controller/battery/status",batery_entry_value},
+		{"/core/sensor_laser/data/value", laser_slider_value},
+		{"/core/sensor_bumper/data", bumper_button_state},
+		{"/fleet/connection_status/state", conecttion_state},
+		{"/fleet/robot_status/state", robot_status},
+		{"/low-level/battery/data/percentage", batery_data_percentage},
+		{NULL, TOPIC_COUNT}
+};
+
+
 
 
 
@@ -255,11 +279,14 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
 
     LWIP_UNUSED_ARG(arg);
 
-    //add if statements for new topics
-    if (topic_status.topics.speed_slider) {
-    	topic_status.topics.speed_slider = 0;  // clean flag
-        PRINTF("Speed SLIDER message: \r\n");
+
+    if (topic_status.topics.speed_slider)/*If message comes from slider*/
+    {
+    	to_publublish = data; //copying the data to publish back.
     }
+
+
+
 
    /*
     for (i = 0; i < len; i++)
@@ -294,9 +321,14 @@ static void mqtt_subscribe_topics(mqtt_client_t *client)
     mqtt_set_inpub_callback(client, mqtt_incoming_publish_cb, mqtt_incoming_data_cb,
                             LWIP_CONST_CAST(void *, &mqtt_client_info));
 
+
+
+    // creating loop for Core to subscribe funcion for core
+
+
     for (i = 0; i < ARRAY_SIZE(topics); i++)
     {
-        err = mqtt_subscribe(client, topics[i], qos[i], mqtt_topic_subscribed_cb, LWIP_CONST_CAST(void *, topics[i]));
+        err = mqtt_subscribe(client, topics[i].index, qos[i], mqtt_topic_subscribed_cb, LWIP_CONST_CAST(void *, topics[i]));
 
         if (err == ERR_OK)
         {
@@ -395,7 +427,18 @@ static void publish_message(void *ctx)
 	 * tcpipcllback has multiple calls.
 	 * */
     static const char *topic =  topic_map[speed_slider].topic_name;
-    static const char *message = "message from board";
+
+    // decide what topic to write
+
+ if (topic_status.topics.speed_slider)/*If message comes from slider*/
+	topic = publish_topic_map[speed_slider].topic_publish_name;
+ else if (topic_status.topics.bumper_button)
+	 topic = publish_topic_map[bumper_button].topic_publish_name;
+
+
+
+
+
   // static const char *topic2   = "bar";
  //   static const char *message2 = "test msg from bar";
 
@@ -403,9 +446,7 @@ static void publish_message(void *ctx)
 
     //PRINTF("Going to publish to the topic \"%s\"...\r\n", topic);
 
-
-
-    mqtt_publish(mqtt_client, topic, message, strlen(message), 1, 0, mqtt_message_published_cb, (void *)topic);
+    mqtt_publish(mqtt_client, topic, to_publish, strlen(message), 1, 0, mqtt_message_published_cb, (void *)topic);
  //   mqtt_publish(mqtt_client, topic2, message2, strlen(message2), 1, 0, mqtt_message_published_cb, (void *)topic2);
 
 }
@@ -578,12 +619,15 @@ int main(void)
     /* Disable SYSMPU. */
     base->CESR &= ~SYSMPU_CESR_VLD_MASK;
 
+
+
+
+
     /* Initialize lwIP from thread */
     if (sys_thread_new("main", stack_init, NULL, INIT_THREAD_STACKSIZE, INIT_THREAD_PRIO) == NULL)
     {
         LWIP_ASSERT("main(): Task creation failed.", 0);
     }
-
     vTaskStartScheduler();
 
     /* Will not get here unless a task calls vTaskEndScheduler ()*/
