@@ -163,14 +163,16 @@ static const struct
     topic_index_t index;
 }publish_topic_map[] ={
 		 //change names and add topics
-		    {"/speed_slider/data/value", speed_slider},
-		    {"/battery_entry/data/value", battery_entry},
-			{"/laser_slider/data/value" ,  laser_slider},
-			{"/bumper_button/pressed/value", bumper_button},
-			{"/mode_selector/driving_mode/value", mode_selector},
-			{"/switch_connection/state/value", switch_connection},
-			{"/option_list/job", option_list},
-		    {NULL, TOPIC_COUNT}
+		{"/low_level_controller/speed/data/value", speed_slider},
+		{"/low_level_controller/battery/status",battery_entry},
+		{"/core/sensor_laser/data/value", laser_slider},
+		{"/core/sensor_bumper/data", bumper_button},
+		{"/low-level/battery/data/percentage", mode_selector},
+		{"/fleet/connection_status/state",switch_connection, },
+		{"/fleet/robot_status/state", option_list},
+
+				{NULL, TOPIC_COUNT}
+		};
 };
 
 
