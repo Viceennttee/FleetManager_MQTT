@@ -37,10 +37,13 @@
 #include "fsl_phyksz8081.h"
 #include "fsl_enet_mdio.h"
 #include "fsl_device_registers.h"
+#include "fsl_gpio.h"
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
 
+#define BOARD_LED_GPIO     BOARD_LED_RED_GPIO
+#define BOARD_LED_GPIO_PIN BOARD_LED_RED_GPIO_PIN
 /* @TEST_ANCHOR */
 
 /* MAC address configuration. */
@@ -97,7 +100,10 @@
 #define APP_THREAD_PRIO DEFAULT_THREAD_PRIO
 
 ///
-
+ gpio_pin_config_t led_config = {
+        kGPIO_DigitalOutput,
+        0,
+    };
 const uint8_t *to_publish;
 ////
 
@@ -131,8 +137,6 @@ typedef union
 		uint8_t		reserved	 		:	1;
 	}topics;
 }Topic_Flags;
-
-//static volatile uint8_t topic_flags[TOPIC_COUNT] = {0};
 
 
 //struct to relate enum(int) and topic name(cjar)
@@ -170,10 +174,8 @@ static const struct
 		{"/low-level/battery/data/percentage", mode_selector},
 		{"/fleet/connection_status/state",switch_connection, },
 		{"/fleet/robot_status/state", option_list},
-
-				{NULL, TOPIC_COUNT}
+		{NULL, TOPIC_COUNT}
 		};
-};
 
 
 
@@ -285,30 +287,20 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
 
     if (topic_status.topics.speed_slider)/*If message comes from slider*/
     {
+    	/*Laser in cm */
     	to_publish = data; //copying the data to publish back.
-    }
-
-
-
-
-   /*
-    for (i = 0; i < len; i++)
+    }else if (topic_status.topics.bumper_button)
     {
-        if (isprint(data[i]))
-        {
-            PRINTF("%c", (char)data[i]);
-        }
-        else
-        {
-            PRINTF("\\x%02x", data[i]);
-        }
-    }
+    	/* bumper TRUE/False */
+    	to_publish = data;
 
-    if (flags & MQTT_DATA_FLAG_LAST)
-    {
-        PRINTF("\"\r\n");
-    }
-    */
+	}else if (topic_status.topics.mode_selector)
+	{
+		/*Auto Manual button*/
+    	if (strcmp("Mode Manual",data )==0)
+    		GPIO_PortToggle(BOARD_LED_GPIO, 1u << BOARD_LED_GPIO_PIN);
+	}
+
 }
 
 /*!
@@ -621,6 +613,7 @@ int main(void)
     BOARD_InitBootPins();
     BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
+    GPIO_PinInit(BOARD_LED_GPIO, BOARD_LED_GPIO_PIN, &led_config);
     /* Disable SYSMPU. */
     base->CESR &= ~SYSMPU_CESR_VLD_MASK;
 
