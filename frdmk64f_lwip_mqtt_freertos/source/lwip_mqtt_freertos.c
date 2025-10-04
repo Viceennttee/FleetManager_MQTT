@@ -82,7 +82,7 @@
 #endif /* EXAMPLE_NETIF_INIT_FN */
 
 /*! @brief MQTT server host name or IP address. */
-#define EXAMPLE_MQTT_SERVER_HOST "broker.hivemq.com"
+#define EXAMPLE_MQTT_SERVER_HOST "192.168.1.50"
 
 /*! @brief MQTT server port number. */
 #define EXAMPLE_MQTT_SERVER_PORT 1883
@@ -105,6 +105,10 @@
         0,
     };
 const uint8_t *to_publish;
+
+#define MQTT_MAX_PAYLOAD 64
+static uint16_t mqtt_payload_len = 0;
+static char mqtt_payload_buf[MQTT_MAX_PAYLOAD];
 ////
 
 ////////flags management
@@ -150,8 +154,8 @@ static const struct {
     {"/battery_entry/data/value", battery_entry},
 	{"/laser_slider/data/value" ,  laser_slider},
 	{"/bumper_button/pressed/value", bumper_button},
-	{"/mode_selector/driving_mode/value", mode_selector},
-	{"/switch_connection/state/value", switch_connection},
+	{"/mode_selector/drive_mode/value", mode_selector},
+	{"/switch_connection/state/", switch_connection},
 	{"/option_list/job", option_list},
     {NULL, TOPIC_COUNT}
 };
@@ -190,6 +194,7 @@ Topic_Flags topic_status;
  ******************************************************************************/
 
 static void connect_to_mqtt(void *ctx);
+static void publish_message(void *ctx);
 
 /*******************************************************************************
  * Variables
@@ -283,12 +288,15 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
     int i;
 
     LWIP_UNUSED_ARG(arg);
+    memcpy(mqtt_payload_buf, data, len);
+	mqtt_payload_buf[len] = '\0';
+	mqtt_payload_len = len;
 
 
     if (topic_status.topics.speed_slider)/*If message comes from slider*/
     {
     	/*Laser in cm */
-    	to_publish = data; //copying the data to publish back.
+    	to_publish = mqtt_payload_buf; //copying the data to publish back.
     }else if (topic_status.topics.bumper_button)
     {
     	/* bumper TRUE/False */
@@ -300,7 +308,12 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
     	if (strcmp("Mode Manual",data )==0)
     		GPIO_PortToggle(BOARD_LED_GPIO, 1u << BOARD_LED_GPIO_PIN);
 	}
-
+    if (flags & MQTT_DATA_FLAG_LAST) {
+		err_t err = tcpip_callback(publish_message, NULL);
+		if (err != ERR_OK) {
+			PRINTF("Failed to invoke publishing of a message on the tcpip_thread: %d.\r\n", err);
+		}
+    }
 }
 
 /*!
@@ -308,7 +321,7 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
  */
 static void mqtt_subscribe_topics(mqtt_client_t *client)
 {
-    int qos[]                   = {0, 1};
+    const u8_t sub_qos = 0;
     err_t err;
     int i;
 
@@ -320,20 +333,20 @@ static void mqtt_subscribe_topics(mqtt_client_t *client)
     // creating loop for Core to subscribe funcion for core
 
 
-    for (i = 0; i < ARRAY_SIZE(topic_map); i++)
+    for (i = 0; topic_map[i].topic_name != NULL; i++)
     {
         err = mqtt_subscribe(client,
-        					topic_map[i].topic_name,
-							qos[i], mqtt_topic_subscribed_cb,
-							LWIP_CONST_CAST(void *, topic_map[i].topic_name));
+                            topic_map[i].topic_name,
+                            sub_qos, mqtt_topic_subscribed_cb,
+                            LWIP_CONST_CAST(void *, topic_map[i].topic_name));
 
         if (err == ERR_OK)
         {
-            PRINTF("Subscribing to the topic \"%s\" with QoS %d...\r\n", topic_map[i], qos[i]);
+            PRINTF("Subscribing to the topic \"%s\" with QoS %d...\r\n", topic_map[i].topic_name, sub_qos);
         }
         else
         {
-            PRINTF("Failed to subscribe to the topic \"%s\" with QoS %d: %d.\r\n", topic_map[i], qos[i], err);
+            PRINTF("Failed to subscribe to the topic \"%s\" with QoS %d: %d.\r\n", topic_map[i].topic_name, sub_qos, err);
         }
     }
 }
@@ -512,7 +525,7 @@ static void app_thread(void *arg)
         PRINTF("Failed to obtain IP address: %d.\r\n", err);
     }
 
-    /* Publish some messages */
+    /* Publish some messages
     for (i = 0; i < 5;)
     {
         if (connected)
@@ -526,7 +539,7 @@ static void app_thread(void *arg)
         }
 
         sys_msleep(1000U);
-    }
+    }*/
 
     vTaskDelete(NULL);
 }
