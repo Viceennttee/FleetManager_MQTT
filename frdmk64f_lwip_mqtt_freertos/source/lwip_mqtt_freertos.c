@@ -161,7 +161,7 @@ static const struct {
 	{"/mode_selector/drive_mode/value", mode_selector},
 	{"/switch_connection/state", switch_connection},
 	{"/option_list/job", option_list},
-	{"/low-level/battery/percentage", battery_status},
+	{"/low_level_controller/battery/percentage", battery_status},
 	{"/core/sensor_laser/data/value", motion_cmd},
     {NULL, TOPIC_COUNT}
 };
@@ -283,9 +283,9 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
         else if (strcmp(topic, topic_map[option_list].topic_name) == 0)
         	topic_status.topics.option_list = 1;
         else if (strcmp(topic, topic_map[battery_status].topic_name) == 0)
-        	topic_status.topics.option_list = 1;
+        	topic_status.topics.battery_status = 1;
         else if (strcmp(topic, topic_map[motion_cmd].topic_name) == 0)
-        	topic_status.topics.option_list = 1;
+        	topic_status.topics.motion_cmd = 1;
         else
         	PRINTF("Unknown topic");
 
