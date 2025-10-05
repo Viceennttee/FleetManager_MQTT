@@ -121,6 +121,8 @@ typedef enum {
 	mode_selector,
 	switch_connection,
 	option_list,
+	battery_status,
+	motion_cmd,
     //insert new topics, and change current ones
     TOPIC_COUNT
 } topic_index_t;
@@ -138,6 +140,8 @@ typedef union
 		uint8_t		mode_selector 		:	1;
 		uint8_t		switch_connection 	:	1;
 		uint8_t		option_list 		:	1;
+		uint8_t		battery_status		: 	1;
+		uint8_t		motion_cmd			: 	1;
 		uint8_t		reserved	 		:	1;
 	}topics;
 }Topic_Flags;
@@ -155,8 +159,10 @@ static const struct {
 	{"/laser_slider/data/value" ,  laser_slider},
 	{"/bumper_button/pressed/value", bumper_button},
 	{"/mode_selector/drive_mode/value", mode_selector},
-	{"/switch_connection/state/", switch_connection},
+	{"/switch_connection/state", switch_connection},
 	{"/option_list/job", option_list},
+	{"/low-level/battery/percentage", battery_status},
+	{"/core/sensor_laser/data/value", motion_cmd},
     {NULL, TOPIC_COUNT}
 };
 
@@ -172,12 +178,14 @@ static const struct
 }publish_topic_map[] ={
 		 //change names and add topics
 		{"/low_level_controller/speed/data/value", speed_slider},
-		{"/low_level_controller/battery/status",battery_entry},
+		{"/low_level_controller/battery/percentage",battery_entry},
 		{"/core/sensor_laser/data/value", laser_slider},
 		{"/core/sensor_bumper/data", bumper_button},
-		{"/low-level/battery/data/percentage", mode_selector},
+		{"/core/driving_mode/mode", mode_selector},
 		{"/fleet/connection_status/state",switch_connection, },
 		{"/fleet/robot_status/state", option_list},
+		{"/fleet/battery_status/status", battery_status},
+		{"/low_level_controller/motion/command", motion_cmd},
 		{NULL, TOPIC_COUNT}
 		};
 
@@ -258,7 +266,7 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
 {
     LWIP_UNUSED_ARG(arg);
 
-
+    topic_status.All_Flags = 0;
     //check which topic is sending msg and raise that flag
         if (strcmp(topic_map[speed_slider].topic_name,topic) == 0)
         	topic_status.topics.speed_slider = 1;
@@ -274,14 +282,18 @@ static void mqtt_incoming_publish_cb(void *arg, const char *topic, u32_t tot_len
         	topic_status.topics.switch_connection = 1;
         else if (strcmp(topic, topic_map[option_list].topic_name) == 0)
         	topic_status.topics.option_list = 1;
+        else if (strcmp(topic, topic_map[battery_status].topic_name) == 0)
+        	topic_status.topics.option_list = 1;
+        else if (strcmp(topic, topic_map[motion_cmd].topic_name) == 0)
+        	topic_status.topics.option_list = 1;
         else
-        	PRINTF("Unkown topic");
+        	PRINTF("Unknown topic");
 
     PRINTF("Received %u bytes from the topic \"%s\": \"\r\n", tot_len, topic);
 }
 
 /*!
- * @brief Called when recieved incoming published message fragment.
+ * @brief Called when received incoming published message fragment.
  */
 static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t flags)
 {
@@ -292,21 +304,43 @@ static void mqtt_incoming_data_cb(void *arg, const u8_t *data, u16_t len, u8_t f
 	mqtt_payload_buf[len] = '\0';
 	mqtt_payload_len = len;
 
-
-    if (topic_status.topics.speed_slider)/*If message comes from slider*/
+	if (topic_status.topics.speed_slider)
+	{
+		/*Speed in percentage */
+		to_publish = mqtt_payload_buf;
+	}else if (topic_status.topics.battery_entry)
+	{
+		/*Battery in percentage */
+		to_publish = mqtt_payload_buf;
+	}else if (topic_status.topics.motion_cmd)
+	{
+		/*Laser in proximity */
+		to_publish = mqtt_payload_buf;
+	}else if (topic_status.topics.laser_slider)
     {
     	/*Laser in cm */
-    	to_publish = mqtt_payload_buf; //copying the data to publish back.
+    	to_publish = mqtt_payload_buf;
     }else if (topic_status.topics.bumper_button)
     {
     	/* bumper TRUE/False */
-    	to_publish = data;
-
+    	to_publish = mqtt_payload_buf;
 	}else if (topic_status.topics.mode_selector)
 	{
 		/*Auto Manual button*/
     	if (strcmp("Mode Manual",data )==0)
     		GPIO_PortToggle(BOARD_LED_GPIO, 1u << BOARD_LED_GPIO_PIN);
+	}else if (topic_status.topics.switch_connection)
+    {
+    	/* switch for robot connection */
+    	to_publish = mqtt_payload_buf;
+	}else if (topic_status.topics.option_list)
+    {
+    	/* list for current job */
+    	to_publish = mqtt_payload_buf;
+	}else if (topic_status.topics.battery_status)
+    {
+    	/* battery status lcd */
+    	to_publish = mqtt_payload_buf;
 	}
     if (flags & MQTT_DATA_FLAG_LAST) {
 		err_t err = tcpip_callback(publish_message, NULL);
@@ -348,6 +382,7 @@ static void mqtt_subscribe_topics(mqtt_client_t *client)
         {
             PRINTF("Failed to subscribe to the topic \"%s\" with QoS %d: %d.\r\n", topic_map[i].topic_name, sub_qos, err);
         }
+        sys_msleep(50);
     }
 }
 
@@ -436,16 +471,28 @@ static void publish_message(void *ctx)
 	 * topic is to publish, since it was not an easy implementation adding this in the callback definition
 	 * tcpipcllback has multiple calls.
 	 * */
-    static const char *topic =  topic_map[speed_slider].topic_name;
+    static const char *topic =  NULL;
 
     // decide what topic to write
 
  if (topic_status.topics.speed_slider)/*If message comes from slider*/
 	topic = publish_topic_map[speed_slider].topic_publish_name;
+ else if (topic_status.topics.battery_entry)
+ 	topic = publish_topic_map[battery_entry].topic_publish_name;
+ else if (topic_status.topics.laser_slider)
+	topic = publish_topic_map[laser_slider].topic_publish_name;
  else if (topic_status.topics.bumper_button)
-	 topic = publish_topic_map[bumper_button].topic_publish_name;
-
-
+	topic = publish_topic_map[bumper_button].topic_publish_name;
+ else if (topic_status.topics.motion_cmd)
+    topic = publish_topic_map[motion_cmd].topic_publish_name;
+ else if (topic_status.topics.mode_selector)
+    topic = publish_topic_map[mode_selector].topic_publish_name;
+ else if (topic_status.topics.switch_connection)
+     topic = publish_topic_map[switch_connection].topic_publish_name;
+ else if (topic_status.topics.option_list)
+      topic = publish_topic_map[option_list].topic_publish_name;
+ else if (topic_status.topics.battery_status)
+      topic = publish_topic_map[battery_status].topic_publish_name;
 
 
 
@@ -458,7 +505,7 @@ static void publish_message(void *ctx)
 
     mqtt_publish(mqtt_client, topic, to_publish, strlen(to_publish), 1, 0, mqtt_message_published_cb, (void *)topic);
  //   mqtt_publish(mqtt_client, topic2, message2, strlen(message2), 1, 0, mqtt_message_published_cb, (void *)topic2);
-
+    topic_status.All_Flags = 0;
 }
 
 /*!
