@@ -142,9 +142,9 @@ static const struct {
     topic_index_t index;
 }topic_map[] = {
     //change names and add topics
-	{"/switch_connection/state/value", switch_connection},
+	{"/switch_connection/state", switch_connection},
 	{"/option_list/job", option_list},
-	{"/battery_entry/data/value", battery_status},
+	{"/low_level_controller/battery/percentage", battery_status},
     {NULL, TOPIC_COUNT}
 };
 
