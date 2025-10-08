@@ -1,1 +1,7 @@
 /.metadata/
+/*.o
+/*.d
+/*.mk
+/*.xml
+frdmk64f_lwip_mqtt_freertos/Debug/
+/*.cproect
