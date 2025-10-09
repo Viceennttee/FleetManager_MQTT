@@ -124,6 +124,8 @@ again:
  * @param arg unused argument
  */
 static void
+
+
 tcpip_thread(void *arg)
 {
   struct tcpip_msg *msg;
@@ -135,6 +137,11 @@ tcpip_thread(void *arg)
   if (tcpip_init_done != NULL) {
     tcpip_init_done(tcpip_init_done_arg);
   }
+
+
+
+
+
 
   while (1) {                          /* MAIN Loop */
     LWIP_TCPIP_THREAD_ALIVE();
@@ -325,7 +332,6 @@ tcpip_callback(tcpip_callback_fn function, void *ctx)
   msg->type = TCPIP_MSG_CALLBACK;
   msg->msg.cb.function = function;
   msg->msg.cb.ctx = ctx;
-
   sys_mbox_post(&tcpip_mbox, msg);
   return ERR_OK;
 }
